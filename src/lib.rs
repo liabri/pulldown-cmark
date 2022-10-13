@@ -130,6 +130,8 @@ pub enum Tag<'a> {
     TableCell,
 
     // span-level tags
+    Superscript,
+    Subscript,
     Emphasis,
     Strong,
     Strikethrough,

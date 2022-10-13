@@ -256,6 +256,8 @@ where
                     self.write("\n<li>")
                 }
             }
+            Tag::Superscript => self.write("<sup>"),
+            Tag::Subscript => self.write("<sub>"),
             Tag::Emphasis => self.write("<em>"),
             Tag::Strong => self.write("<strong>"),
             Tag::Strikethrough => self.write("<del>"),
@@ -349,6 +351,12 @@ where
             }
             Tag::Item => {
                 self.write("</li>\n")?;
+            }
+            Tag::Superscript => {
+                self.write("</sup>")?;
+            }
+            Tag::Subscript => {
+                self.write("</sub>")?;
             }
             Tag::Emphasis => {
                 self.write("</em>")?;

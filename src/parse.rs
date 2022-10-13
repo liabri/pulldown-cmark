@@ -59,6 +59,7 @@ pub(crate) enum ItemBody {
     // These are possible inline items, need to be resolved in second pass.
 
     // repeats, can_open, can_close
+    // MaybeStrikethrough(usize, bool, bool),
     MaybeEmphasis(usize, bool, bool),
     // quote byte, can_open, can_close
     MaybeSmartQuote(u8, bool, bool),
@@ -70,6 +71,8 @@ pub(crate) enum ItemBody {
     MaybeImage,
 
     // These are inline items after resolution.
+    Superscript,
+    Subscript,
     Emphasis,
     Strong,
     Strikethrough,
@@ -552,9 +555,7 @@ impl<'input, 'callback> Parser<'input, 'callback> {
                     let c = self.text.as_bytes()[self.tree[cur_ix].item.start];
                     let both = can_open && can_close;
                     if can_close {
-                        while let Some(el) =
-                            self.inline_stack.find_match(&mut self.tree, c, count, both)
-                        {
+                        while let Some(el) = self.inline_stack.find_match(&mut self.tree, c, count, both) {
                             // have a match!
                             if let Some(prev_ix) = prev {
                                 self.tree[prev_ix].next = None;
@@ -566,8 +567,12 @@ impl<'input, 'callback> Parser<'input, 'callback> {
 
                             // work from the inside out
                             while start > el.start + el.count - match_count {
-                                let (inc, ty) = if c == b'~' {
+                                let (inc, ty) = if c == b'~' && (start > el.start + el.count - match_count + 1) {
                                     (2, ItemBody::Strikethrough)
+                                } else if c == b'~' {
+                                    (1, ItemBody::Subscript)    
+                                } else if c == b'^' {
+                                    (2, ItemBody::Superscript)    
                                 } else if start > el.start + el.count - match_count + 1 {
                                     (2, ItemBody::Strong)
                                 } else {
@@ -926,7 +931,7 @@ impl<'a> Tree<Item> {
 struct InlineEl {
     start: TreeIndex, // offset of tree node
     count: usize,
-    c: u8,      // b'*' or b'_'
+    c: u8,      // b'*' or b'_' or b'~'
     both: bool, // can both open and close
 }
 
@@ -937,7 +942,7 @@ struct InlineStack {
     // a strikethrough delimiter will never match with any element
     // in the stack with index smaller than
     // `lower_bounds[InlineStack::TILDES]`.
-    lower_bounds: [usize; 7],
+    lower_bounds: [usize; 8],
 }
 
 impl InlineStack {
@@ -949,6 +954,7 @@ impl InlineStack {
     const ASTERISK_BASE: usize = 2;
     const TILDES: usize = 5;
     const UNDERSCORE_BOTH: usize = 6;
+    const CIRCUMFLEX: usize = 7;
 
     fn pop_all(&mut self, tree: &mut Tree<Item>) {
         for el in self.stack.drain(..) {
@@ -956,7 +962,7 @@ impl InlineStack {
                 tree[el.start + i].item.body = ItemBody::Text;
             }
         }
-        self.lower_bounds = [0; 7];
+        self.lower_bounds = [0; 8];
     }
 
     fn get_lowerbound(&self, c: u8, count: usize, both: bool) -> usize {
@@ -976,8 +982,10 @@ impl InlineStack {
                     self.lower_bounds[InlineStack::ASTERISK_NOT_BOTH],
                 )
             }
-        } else {
+        } else if c == b'~' {
             self.lower_bounds[InlineStack::TILDES]
+        } else {
+            self.lower_bounds[InlineStack::CIRCUMFLEX]
         }
     }
 
@@ -993,8 +1001,10 @@ impl InlineStack {
             if !both {
                 self.lower_bounds[InlineStack::ASTERISK_NOT_BOTH] = new_bound;
             }
-        } else {
+        } else if c == b'~' {
             self.lower_bounds[InlineStack::TILDES] = new_bound;
+        } else {
+            self.lower_bounds[InlineStack::CIRCUMFLEX] = new_bound;
         }
     }
 
@@ -1400,6 +1410,8 @@ impl<'a, 'b> Iterator for OffsetIter<'a, 'b> {
 fn item_to_tag<'a>(item: &Item, allocs: &Allocations<'a>) -> Tag<'a> {
     match item.body {
         ItemBody::Paragraph => Tag::Paragraph,
+        ItemBody::Superscript => Tag::Superscript,
+        ItemBody::Subscript => Tag::Subscript,
         ItemBody::Emphasis => Tag::Emphasis,
         ItemBody::Strong => Tag::Strong,
         ItemBody::Strikethrough => Tag::Strikethrough,
@@ -1455,6 +1467,8 @@ fn item_to_event<'a>(item: Item, text: &'a str, allocs: &Allocations<'a>) -> Eve
         ItemBody::Rule => return Event::Rule,
 
         ItemBody::Paragraph => Tag::Paragraph,
+        ItemBody::Superscript => Tag::Superscript,
+        ItemBody::Subscript => Tag::Subscript,
         ItemBody::Emphasis => Tag::Emphasis,
         ItemBody::Strong => Tag::Strong,
         ItemBody::Strikethrough => Tag::Strikethrough,
