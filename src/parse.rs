@@ -64,6 +64,8 @@ pub(crate) enum ItemBody {
     MaybeSmartQuote(u8, bool, bool),
     MaybeCode(usize, bool), // number of backticks, preceded by backslash
     MaybeHtml,
+    MaybeRubyOpen,
+    MaybeRubyClose(bool),
     MaybeLinkOpen,
     // bool indicates whether or not the preceding section could be a reference
     MaybeLinkClose(bool),
@@ -81,6 +83,11 @@ pub(crate) enum ItemBody {
     Image(LinkIndex),
     FootnoteReference(CowIndex),
     TaskListMarker(bool), // true for checked
+
+    // Ruby
+    Ruby,
+    RubyParantheses, //<rp>
+    RubyText, //<rt>
 
     Rule,
     Heading(HeadingLevel, Option<HeadingIndex>), // heading level
@@ -933,7 +940,7 @@ impl<'a> Tree<Item> {
 struct InlineEl {
     start: TreeIndex, // offset of tree node
     count: usize,
-    c: u8,      // b'*' or b'_' or b'~'
+    c: u8,      // b'*' or b'_' or b'~' or b'^'
     both: bool, // can both open and close
 }
 
@@ -1411,6 +1418,9 @@ impl<'a, 'b> Iterator for OffsetIter<'a, 'b> {
 
 fn item_to_tag<'a>(item: &Item, allocs: &Allocations<'a>) -> Tag<'a> {
     match item.body {
+        ItemBody::Ruby => Tag::Ruby,
+        ItemBody::RubyParantheses => Tag::RubyParantheses,
+        ItemBody::RubyText => Tag::RubyText,        
         ItemBody::Paragraph => Tag::Paragraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,
@@ -1469,6 +1479,9 @@ fn item_to_event<'a>(item: Item, text: &'a str, allocs: &Allocations<'a>) -> Eve
         ItemBody::TaskListMarker(checked) => return Event::TaskListMarker(checked),
         ItemBody::Rule => return Event::Rule,
 
+        ItemBody::Ruby => Tag::Ruby,
+        ItemBody::RubyParantheses => Tag::RubyParantheses,
+        ItemBody::RubyText => Tag::RubyText,
         ItemBody::Paragraph => Tag::Paragraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,

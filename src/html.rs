@@ -201,6 +201,9 @@ where
                     _ => self.write(">"),
                 }
             }
+            Tag::Ruby => self.write("<ruby>"),
+            Tag::RubyParantheses => self.write("<rp>"),
+            Tag::RubyText => self.write("<rt>"),
             Tag::BlockQuote => {
                 if self.end_newline {
                     self.write("<blockquote>\n")
@@ -337,6 +340,15 @@ where
                     }
                 }
                 self.table_cell_index += 1;
+            }
+            Tag::Ruby => {
+                self.write("</ruby>")?;
+            }
+            Tag::RubyParantheses => {
+                self.write("</rp>")?;
+            }
+            Tag::RubyText => {
+                self.write("</rt>")?;
             }
             Tag::BlockQuote => {
                 self.write("</blockquote>\n")?;

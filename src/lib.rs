@@ -129,6 +129,11 @@ pub enum Tag<'a> {
     TableRow,
     TableCell,
 
+    // ruby
+    Ruby,
+    RubyParantheses,
+    RubyText,
+
     // span-level tags
     Superscript,
     Subscript,
