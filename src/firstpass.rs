@@ -557,17 +557,6 @@ impl<'a, 'b> FirstPass<'a, 'b> {
                         LoopInstruction::ContinueAndSkip(0)
                     }
                 }
-                // c @ b'^' => {
-                //     self.tree.append_text(begin_text, ix);
-                //     let count = 1 + scan_ch_repeat(&bytes[(ix + 1)..], b'`');
-                //     self.tree.append(Item {
-                //         start: ix,
-                //         end: ix + count,
-                //         body: ItemBody::MaybeSuperscript(count, false),
-                //     });
-                //     begin_text = ix + count;
-                //     LoopInstruction::ContinueAndSkip(count - 1)                  
-                // }
                 c @ b'*' | c @ b'_' | c @ b'~' | c @ b'^' => {
                     let string_suffix = &self.text[ix..];
                     let count = 1 + scan_ch_repeat(&string_suffix.as_bytes()[1..], c);

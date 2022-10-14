@@ -575,22 +575,16 @@ impl<'input, 'callback> Parser<'input, 'callback> {
                             // work from the inside out
                             while start > el.start + el.count - match_count {
                                 let (inc, ty) = if c == b'^' {
-                                    println!("^");
                                     (1, ItemBody::Superscript)  
                                 } else if c == b'_' {
-                                    println!("_");
                                     (1, ItemBody::Underline) 
                                 } else if c == b'~' && start > el.start + el.count - match_count + 1 {
-                                    println!("~");
                                     (2, ItemBody::Strikethrough)    
                                 } else if c == b'~' {
-                                    println!("~~");
                                     (1, ItemBody::Subscript)      
                                 } else if c == b'*' && start > el.start + el.count - match_count + 1 {
-                                    println!("*");
                                     (2, ItemBody::Strong)
                                 } else {
-                                    println!("**");
                                     (1, ItemBody::Emphasis)
                                 };
 
