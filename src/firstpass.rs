@@ -563,13 +563,13 @@ impl<'a, 'b> FirstPass<'a, 'b> {
                     let can_open = delim_run_can_open(self.text, string_suffix, count, ix);
                     let can_close = delim_run_can_close(self.text, string_suffix, count, ix);
 
-                    if (can_open || can_close) {
+                    if can_open || can_close {
                         self.tree.append_text(begin_text, ix);
                         for i in 0..count {
                             self.tree.append(Item {
                                 start: ix + i,
                                 end: ix + i + 1,
-                                body: ItemBody::MaybeEmphasis(count - i, can_open, can_close),
+                                body: ItemBody::MaybeSimple(count - i, can_open, can_close),
                             });
                         }
                         begin_text = ix + count;

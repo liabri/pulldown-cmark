@@ -59,9 +59,7 @@ pub(crate) enum ItemBody {
     // These are possible inline items, need to be resolved in second pass.
 
     // repeats, can_open, can_close
-    // MaybeStrikethrough(usize, bool, bool),
-    MaybeSuperscript,
-    MaybeEmphasis(usize, bool, bool),
+    MaybeSimple(usize, bool, bool),
     // quote byte, can_open, can_close
     MaybeSmartQuote(u8, bool, bool),
     MaybeCode(usize, bool), // number of backticks, preceded by backslash
@@ -111,9 +109,8 @@ impl<'a> ItemBody {
     fn is_inline(&self) -> bool {
         matches!(
             *self,
-            ItemBody::MaybeEmphasis(..)
+            ItemBody::MaybeSimple(..)
                 | ItemBody::MaybeSmartQuote(..)
-                | ItemBody::MaybeSuperscript
                 | ItemBody::MaybeHtml
                 | ItemBody::MaybeCode(..)
                 | ItemBody::MaybeLinkOpen
@@ -234,10 +231,6 @@ impl<'input, 'callback> Parser<'input, 'callback> {
 
         while let Some(mut cur_ix) = cur {
             match self.tree[cur_ix].item.body {
-                ItemBody::MaybeSuperscript => {
-
-                }
-
                 ItemBody::MaybeHtml => {
                     let next = self.tree[cur_ix].next;
                     let autolink = if let Some(next_ix) = next {
@@ -558,7 +551,7 @@ impl<'input, 'callback> Parser<'input, 'callback> {
 
         while let Some(mut cur_ix) = cur {
             match self.tree[cur_ix].item.body {
-                ItemBody::MaybeEmphasis(mut count, can_open, can_close) => {
+                ItemBody::MaybeSimple(mut count, can_open, can_close) => {
                     let c = self.text.as_bytes()[self.tree[cur_ix].item.start];
                     let both = can_open && can_close;
                     if can_close {
