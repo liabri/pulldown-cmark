@@ -557,14 +557,24 @@ impl<'a, 'b> FirstPass<'a, 'b> {
                         LoopInstruction::ContinueAndSkip(0)
                     }
                 }
+                // c @ b'^' => {
+                //     self.tree.append_text(begin_text, ix);
+                //     let count = 1 + scan_ch_repeat(&bytes[(ix + 1)..], b'`');
+                //     self.tree.append(Item {
+                //         start: ix,
+                //         end: ix + count,
+                //         body: ItemBody::MaybeSuperscript(count, false),
+                //     });
+                //     begin_text = ix + count;
+                //     LoopInstruction::ContinueAndSkip(count - 1)                  
+                // }
                 c @ b'*' | c @ b'_' | c @ b'~' | c @ b'^' => {
                     let string_suffix = &self.text[ix..];
                     let count = 1 + scan_ch_repeat(&string_suffix.as_bytes()[1..], c);
                     let can_open = delim_run_can_open(self.text, string_suffix, count, ix);
                     let can_close = delim_run_can_close(self.text, string_suffix, count, ix);
-                    let is_valid_seq = c != b'~' || c != b'^' || count == 2;
 
-                    if (can_open || can_close) && is_valid_seq {
+                    if (can_open || can_close) {
                         self.tree.append_text(begin_text, ix);
                         for i in 0..count {
                             self.tree.append(Item {
@@ -1427,7 +1437,7 @@ fn delim_run_can_open(s: &str, suffix: &str, run_len: usize, ix: usize) -> bool 
         return true;
     }
     let delim = suffix.chars().next().unwrap();
-    if delim == '*' && !is_punctuation(next_char) {
+    if (delim == '*' || delim == '_' || delim == '~' || delim == '^')  && !is_punctuation(next_char) {
         return true;
     }
 

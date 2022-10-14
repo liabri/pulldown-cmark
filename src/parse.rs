@@ -60,6 +60,7 @@ pub(crate) enum ItemBody {
 
     // repeats, can_open, can_close
     // MaybeStrikethrough(usize, bool, bool),
+    MaybeSuperscript,
     MaybeEmphasis(usize, bool, bool),
     // quote byte, can_open, can_close
     MaybeSmartQuote(u8, bool, bool),
@@ -73,6 +74,7 @@ pub(crate) enum ItemBody {
     // These are inline items after resolution.
     Superscript,
     Subscript,
+    Underline,
     Emphasis,
     Strong,
     Strikethrough,
@@ -111,6 +113,7 @@ impl<'a> ItemBody {
             *self,
             ItemBody::MaybeEmphasis(..)
                 | ItemBody::MaybeSmartQuote(..)
+                | ItemBody::MaybeSuperscript
                 | ItemBody::MaybeHtml
                 | ItemBody::MaybeCode(..)
                 | ItemBody::MaybeLinkOpen
@@ -231,6 +234,10 @@ impl<'input, 'callback> Parser<'input, 'callback> {
 
         while let Some(mut cur_ix) = cur {
             match self.tree[cur_ix].item.body {
+                ItemBody::MaybeSuperscript => {
+
+                }
+
                 ItemBody::MaybeHtml => {
                     let next = self.tree[cur_ix].next;
                     let autolink = if let Some(next_ix) = next {
@@ -567,15 +574,23 @@ impl<'input, 'callback> Parser<'input, 'callback> {
 
                             // work from the inside out
                             while start > el.start + el.count - match_count {
-                                let (inc, ty) = if c == b'~' && (start > el.start + el.count - match_count + 1) {
-                                    (2, ItemBody::Strikethrough)
+                                let (inc, ty) = if c == b'^' {
+                                    println!("^");
+                                    (1, ItemBody::Superscript)  
+                                } else if c == b'_' {
+                                    println!("_");
+                                    (1, ItemBody::Underline) 
+                                } else if c == b'~' && start > el.start + el.count - match_count + 1 {
+                                    println!("~");
+                                    (2, ItemBody::Strikethrough)    
                                 } else if c == b'~' {
-                                    (1, ItemBody::Subscript)    
-                                } else if c == b'^' {
-                                    (2, ItemBody::Superscript)    
-                                } else if start > el.start + el.count - match_count + 1 {
+                                    println!("~~");
+                                    (1, ItemBody::Subscript)      
+                                } else if c == b'*' && start > el.start + el.count - match_count + 1 {
+                                    println!("*");
                                     (2, ItemBody::Strong)
                                 } else {
+                                    println!("**");
                                     (1, ItemBody::Emphasis)
                                 };
 
@@ -1412,6 +1427,7 @@ fn item_to_tag<'a>(item: &Item, allocs: &Allocations<'a>) -> Tag<'a> {
         ItemBody::Paragraph => Tag::Paragraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,
+        ItemBody::Underline => Tag::Underline,
         ItemBody::Emphasis => Tag::Emphasis,
         ItemBody::Strong => Tag::Strong,
         ItemBody::Strikethrough => Tag::Strikethrough,
@@ -1469,6 +1485,7 @@ fn item_to_event<'a>(item: Item, text: &'a str, allocs: &Allocations<'a>) -> Eve
         ItemBody::Paragraph => Tag::Paragraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,
+        ItemBody::Underline => Tag::Underline,
         ItemBody::Emphasis => Tag::Emphasis,
         ItemBody::Strong => Tag::Strong,
         ItemBody::Strikethrough => Tag::Strikethrough,

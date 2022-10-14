@@ -132,6 +132,7 @@ pub enum Tag<'a> {
     // span-level tags
     Superscript,
     Subscript,
+    Underline,
     Emphasis,
     Strong,
     Strikethrough,
