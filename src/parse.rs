@@ -64,8 +64,6 @@ pub(crate) enum ItemBody {
     MaybeSmartQuote(u8, bool, bool),
     MaybeCode(usize, bool), // number of backticks, preceded by backslash
     MaybeHtml,
-    MaybeRubyOpen,
-    MaybeRubyClose(bool),
     MaybeLinkOpen,
     // bool indicates whether or not the preceding section could be a reference
     MaybeLinkClose(bool),
@@ -78,16 +76,12 @@ pub(crate) enum ItemBody {
     Emphasis,
     Strong,
     Strikethrough,
+    Ruby(CowIndex),
     Code(CowIndex),
     Link(LinkIndex),
     Image(LinkIndex),
     FootnoteReference(CowIndex),
     TaskListMarker(bool), // true for checked
-
-    // Ruby
-    Ruby,
-    RubyParantheses, //<rp>
-    RubyText, //<rt>
 
     Rule,
     Heading(HeadingLevel, Option<HeadingIndex>), // heading level
@@ -362,7 +356,21 @@ impl<'input, 'callback> Parser<'input, 'callback> {
                             continue;
                         }
                         let next = self.tree[cur_ix].next;
-                        if let Some((next_ix, url, title)) =
+
+                        //ruby
+                        if let Some((next_ix, text)) =
+                            self.scan_inline_ruby(block_text, self.tree[cur_ix].item.end, next)
+                        {
+                            println!("NOO");
+                            let cow_ix = self.allocs.allocate_cow(text);
+                            cur = Some(tos.node);
+                            cur_ix = tos.node;
+                            self.tree[cur_ix].item.body = {
+                                ItemBody::Ruby(cow_ix)
+                            }
+                        } 
+
+                        else if let Some((next_ix, url, title)) =
                             self.scan_inline_link(block_text, self.tree[cur_ix].item.end, next)
                         {
                             let next_node = scan_nodes_to_ix(&self.tree, next, next_ix);
@@ -670,6 +678,33 @@ impl<'input, 'callback> Parser<'input, 'callback> {
             }
         }
         self.inline_stack.pop_all(&mut self.tree);
+    }
+
+    /// Returns next byte index, ruby text.
+    fn scan_inline_ruby(
+        &self,
+        underlying: &'input str,
+        mut ix: usize,
+        node: Option<TreeIndex>,
+    ) -> Option<(usize, CowStr<'input>)> {
+        if scan_ch(&underlying.as_bytes()[ix..], b'^') == 0 {
+            return None;
+        }
+        ix += 1;
+        ix += scan_while(&underlying.as_bytes()[ix..], is_ascii_whitespace);
+
+        let (text_length, text) = scan_ruby_text(underlying, ix, LINK_MAX_NESTED_PARENS)?;
+        let text = unescape(text);
+        ix += text_length;
+
+        ix += scan_while(&underlying.as_bytes()[ix..], is_ascii_whitespace);
+
+        if scan_ch(&underlying.as_bytes()[ix..], b'}') == 0 {
+            return None;
+        }
+        ix += 1;
+
+        Some((ix, text))
     }
 
     /// Returns next byte index, url and title.
@@ -1238,6 +1273,9 @@ pub(crate) struct LinkIndex(usize);
 pub(crate) struct CowIndex(usize);
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(crate) struct RubyIndex(usize);
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) struct AlignmentIndex(usize);
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -1418,9 +1456,6 @@ impl<'a, 'b> Iterator for OffsetIter<'a, 'b> {
 
 fn item_to_tag<'a>(item: &Item, allocs: &Allocations<'a>) -> Tag<'a> {
     match item.body {
-        ItemBody::Ruby => Tag::Ruby,
-        ItemBody::RubyParantheses => Tag::RubyParantheses,
-        ItemBody::RubyText => Tag::RubyText,        
         ItemBody::Paragraph => Tag::Paragraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,
@@ -1428,6 +1463,7 @@ fn item_to_tag<'a>(item: &Item, allocs: &Allocations<'a>) -> Tag<'a> {
         ItemBody::Emphasis => Tag::Emphasis,
         ItemBody::Strong => Tag::Strong,
         ItemBody::Strikethrough => Tag::Strikethrough,
+        ItemBody::Ruby(cow_ix) => Tag::Ruby(allocs[cow_ix].clone()),
         ItemBody::Link(link_ix) => {
             let &(ref link_type, ref url, ref title) = allocs.index(link_ix);
             Tag::Link(*link_type, url.clone(), title.clone())
@@ -1479,9 +1515,6 @@ fn item_to_event<'a>(item: Item, text: &'a str, allocs: &Allocations<'a>) -> Eve
         ItemBody::TaskListMarker(checked) => return Event::TaskListMarker(checked),
         ItemBody::Rule => return Event::Rule,
 
-        ItemBody::Ruby => Tag::Ruby,
-        ItemBody::RubyParantheses => Tag::RubyParantheses,
-        ItemBody::RubyText => Tag::RubyText,
         ItemBody::Paragraph => Tag::Paragraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,
@@ -1489,6 +1522,7 @@ fn item_to_event<'a>(item: Item, text: &'a str, allocs: &Allocations<'a>) -> Eve
         ItemBody::Emphasis => Tag::Emphasis,
         ItemBody::Strong => Tag::Strong,
         ItemBody::Strikethrough => Tag::Strikethrough,
+        ItemBody::Ruby(cow_ix) => Tag::Ruby(allocs[cow_ix].clone()),
         ItemBody::Link(link_ix) => {
             let &(ref link_type, ref url, ref title) = allocs.index(link_ix);
             Tag::Link(*link_type, url.clone(), title.clone())

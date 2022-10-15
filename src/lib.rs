@@ -129,11 +129,6 @@ pub enum Tag<'a> {
     TableRow,
     TableCell,
 
-    // ruby
-    Ruby,
-    RubyParantheses,
-    RubyText,
-
     // span-level tags
     Superscript,
     Subscript,
@@ -141,6 +136,9 @@ pub enum Tag<'a> {
     Emphasis,
     Strong,
     Strikethrough,
+
+    // Ruby. The first field is the ruby text
+    Ruby(CowStr<'a>),
 
     /// A link. The first field is the link type, the second the destination URL and the third is a title.
     Link(LinkType, CowStr<'a>, CowStr<'a>),

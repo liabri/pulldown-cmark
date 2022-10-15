@@ -613,26 +613,6 @@ impl<'a, 'b> FirstPass<'a, 'b> {
                         LoopInstruction::ContinueAndSkip(0)
                     }
                 }
-                b'{' => {
-                    self.tree.append_text(begin_text, ix);
-                    self.tree.append(Item {
-                        start: ix,
-                        end: ix + 1,
-                        body: ItemBody::MaybeRubyOpen,
-                    });
-                    begin_text = ix + 1;
-                    LoopInstruction::ContinueAndSkip(0)
-                }
-                b'}' => {
-                    self.tree.append_text(begin_text, ix);
-                    self.tree.append(Item {
-                        start: ix,
-                        end: ix + 1,
-                        body: ItemBody::MaybeRubyClose(true),
-                    });
-                    begin_text = ix + 1;
-                    LoopInstruction::ContinueAndSkip(0)
-                }
                 b'[' => {
                     self.tree.append_text(begin_text, ix);
                     self.tree.append(Item {

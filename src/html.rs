@@ -201,9 +201,6 @@ where
                     _ => self.write(">"),
                 }
             }
-            Tag::Ruby => self.write("<ruby>"),
-            Tag::RubyParantheses => self.write("<rp>"),
-            Tag::RubyText => self.write("<rt>"),
             Tag::BlockQuote => {
                 if self.end_newline {
                     self.write("<blockquote>\n")
@@ -283,6 +280,7 @@ where
                 }
                 self.write("\">")
             }
+            Tag::Ruby(_) => self.write("<ruby>"),
             Tag::Image(_link_type, dest, title) => {
                 self.write("<img src=\"")?;
                 escape_href(&mut self.writer, &dest)?;
@@ -341,15 +339,6 @@ where
                 }
                 self.table_cell_index += 1;
             }
-            Tag::Ruby => {
-                self.write("</ruby>")?;
-            }
-            Tag::RubyParantheses => {
-                self.write("</rp>")?;
-            }
-            Tag::RubyText => {
-                self.write("</rt>")?;
-            }
             Tag::BlockQuote => {
                 self.write("</blockquote>\n")?;
             }
@@ -385,6 +374,14 @@ where
             }
             Tag::Link(_, _, _) => {
                 self.write("</a>")?;
+            }
+            Tag::Ruby(text) => {
+                self.write("<rp>(</rp>")?;
+                self.write("<rt>")?;
+                escape_html(&mut self.writer, &text)?;
+                self.write("</rt>")?;
+                self.write("<rp>)</rp>")?;
+                self.write("</ruby>")?;
             }
             Tag::Image(_, _, _) => (), // shouldn't happen, handled in start
             Tag::FootnoteDefinition(_) => {
