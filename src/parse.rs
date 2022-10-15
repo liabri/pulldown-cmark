@@ -361,15 +361,33 @@ impl<'input, 'callback> Parser<'input, 'callback> {
                         if let Some((next_ix, text)) =
                             self.scan_inline_ruby(block_text, self.tree[cur_ix].item.end, next)
                         {
-                            println!("NOO");
-                            let cow_ix = self.allocs.allocate_cow(text);
+                            println!("RUBY!");
+                            // let cow_ix = self.allocs.allocate_cow(text);
+                            // cur = Some(tos.node);
+                            // cur_ix = tos.node;
+                            // self.tree[cur_ix].item.body = {
+                            //     ItemBody::Ruby(cow_ix)
+                            // }
+
+
+                            let next_node = scan_nodes_to_ix(&self.tree, next, next_ix);
+                            if let Some(prev_ix) = prev {
+                                self.tree[prev_ix].next = None;
+                            }
                             cur = Some(tos.node);
                             cur_ix = tos.node;
-                            self.tree[cur_ix].item.body = {
-                                ItemBody::Ruby(cow_ix)
+                            let cow_ix = self.allocs.allocate_cow(text);
+                            self.tree[cur_ix].item.body = ItemBody::Ruby(cow_ix);
+                            self.tree[cur_ix].child = self.tree[cur_ix].next;
+                            self.tree[cur_ix].next = next_node;
+                            self.tree[cur_ix].item.end = next_ix;
+                            if let Some(next_node_ix) = next_node {
+                                self.tree[next_node_ix].item.start =
+                                    max(self.tree[next_node_ix].item.start, next_ix);
                             }
                         } 
 
+                        // link
                         else if let Some((next_ix, url, title)) =
                             self.scan_inline_link(block_text, self.tree[cur_ix].item.end, next)
                         {
@@ -1271,9 +1289,6 @@ pub(crate) struct LinkIndex(usize);
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) struct CowIndex(usize);
-
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub(crate) struct RubyIndex(usize);
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) struct AlignmentIndex(usize);
