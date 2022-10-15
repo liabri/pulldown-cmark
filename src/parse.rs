@@ -689,12 +689,12 @@ impl<'input, 'callback> Parser<'input, 'callback> {
         self.inline_stack.pop_all(&mut self.tree);
     }
 
-    /// Returns next byte index, ruby text.
+    /// Returns next byte index and ruby text.
     fn scan_inline_ruby(
         &self,
         underlying: &'input str,
         mut ix: usize,
-        node: Option<TreeIndex>,
+        _node: Option<TreeIndex>,
     ) -> Option<(usize, CowStr<'input>)> {
         if scan_ch(&underlying.as_bytes()[ix..], b'^') == 0 {
             return None;
@@ -702,6 +702,7 @@ impl<'input, 'callback> Parser<'input, 'callback> {
         ix += 1;
         ix += scan_while(&underlying.as_bytes()[ix..], is_ascii_whitespace);
 
+        // use node to get separated instances of text eventually
         let (text_length, text) = scan_ruby_text(underlying, ix, LINK_MAX_NESTED_PARENS)?;
         let text = unescape(text);
         ix += text_length;

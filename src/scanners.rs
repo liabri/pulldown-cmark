@@ -794,7 +794,6 @@ pub(crate) fn scan_ruby_text(
     let bytes = &data.as_bytes()[start_ix..];
     let mut i = scan_ch(bytes, b'<');
 
-    // non-pointy links
     let mut nest = 0;
     while i < bytes.len() {
         match bytes[i] {
