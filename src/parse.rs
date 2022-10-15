@@ -709,7 +709,7 @@ impl<'input, 'callback> Parser<'input, 'callback> {
 
         ix += scan_while(&underlying.as_bytes()[ix..], is_ascii_whitespace);
 
-        if scan_ch(&underlying.as_bytes()[ix..], b'}') == 0 {
+        if scan_ch(&underlying.as_bytes()[ix..], b'^') == 0 {
             return None;
         }
         ix += 1;

@@ -792,33 +792,25 @@ pub(crate) fn scan_ruby_text(
     max_next: usize,
 ) -> Option<(usize, &str)> {
     let bytes = &data.as_bytes()[start_ix..];
-    let mut i = scan_ch(bytes, b'<');
 
     let mut nest = 0;
+    let mut i = 0;
     while i < bytes.len() {
         match bytes[i] {
             0x0..=0x20 => {
                 break;
             }
             b'^' => {
-                if nest > max_next {
-                    return None;
-                }
-                nest += 1;
-            }
-            b'}' => {
                 if nest == 0 {
                     break;
                 }
                 nest -= 1;
             }
-            b'\\' if i + 1 < bytes.len() && is_ascii_punctuation(bytes[i + 1]) => {
-                i += 1;
-            }
             _ => {}
         }
         i += 1;
     }
+    
     Some((i, &data[start_ix..(start_ix + i)]))
 }
 
