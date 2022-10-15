@@ -704,7 +704,7 @@ impl<'input, 'callback> Parser<'input, 'callback> {
         ix += scan_while(&underlying.as_bytes()[ix..], is_ascii_whitespace);
 
         // use node to get separated instances of text eventually
-        let (text_length, text) = scan_ruby_text(underlying, ix, LINK_MAX_NESTED_PARENS)?;
+        let (text_length, text) = scan_ruby_text(underlying, ix)?;
         let text = unescape(text);
         ix += text_length;
 

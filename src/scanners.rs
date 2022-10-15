@@ -409,22 +409,43 @@ pub(crate) fn scan_nextline(bytes: &[u8]) -> usize {
     memchr(b'\n', bytes).map_or(bytes.len(), |x| x + 1)
 }
 
-// return: end byte for closing code fence, or None
-// if the line is not a closing code fence
-pub(crate) fn scan_closing_code_fence(
+// // return: end byte for closing code fence, or None
+// // if the line is not a closing code fence
+// pub(crate) fn scan_closing_code_fence(
+//     bytes: &[u8],
+//     fence_char: u8,
+//     n_fence_char: usize,
+// ) -> Option<usize> {
+//     if bytes.is_empty() {
+//         return Some(0);
+//     }
+//     let mut i = 0;
+//     let num_fence_chars_found = scan_ch_repeat(&bytes[i..], fence_char);
+//     if num_fence_chars_found < n_fence_char {
+//         return None;
+//     }
+//     i += num_fence_chars_found;
+//     let num_trailing_spaces = scan_ch_repeat(&bytes[i..], b' ');
+//     i += num_trailing_spaces;
+//     scan_eol(&bytes[i..]).map(|_| i)
+// }
+
+// return: end byte for closing vertical paragraph/code fence, or None
+// if the line is not a closing vertical paragraph/code fence
+pub(crate) fn scan_closing(
     bytes: &[u8],
-    fence_char: u8,
-    n_fence_char: usize,
+    r#char: u8,
+    n_char: usize,
 ) -> Option<usize> {
     if bytes.is_empty() {
         return Some(0);
     }
     let mut i = 0;
-    let num_fence_chars_found = scan_ch_repeat(&bytes[i..], fence_char);
-    if num_fence_chars_found < n_fence_char {
+    let num_chars_found = scan_ch_repeat(&bytes[i..], r#char);
+    if num_chars_found < n_char {
         return None;
     }
-    i += num_fence_chars_found;
+    i += num_chars_found;
     let num_trailing_spaces = scan_ch_repeat(&bytes[i..], b' ');
     i += num_trailing_spaces;
     scan_eol(&bytes[i..]).map(|_| i)
@@ -813,7 +834,6 @@ pub(crate) fn scan_refdef_title(text: &str) -> Option<(usize, &str)> {
 pub(crate) fn scan_ruby_text(
     data: &str,
     start_ix: usize,
-    max_next: usize,
 ) -> Option<(usize, &str)> {
     let bytes = &data.as_bytes()[start_ix..];
 

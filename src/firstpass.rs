@@ -871,8 +871,6 @@ impl<'a, 'b> FirstPass<'a, 'b> {
         // TODO: info strings are typically very short. wouldn't it be faster
         // to just do a forward scan here?
         let mut ix = info_start + scan_nextline(&bytes[info_start..]);
-        let info_end = ix - scan_rev_while(&bytes[info_start..ix], is_ascii_whitespace);
-        let info_string = unescape(&self.text[info_start..info_end]);
         self.tree.append(Item {
             start: start_ix,
             end: 0, // will get set later
@@ -889,7 +887,7 @@ impl<'a, 'b> FirstPass<'a, 'b> {
             let mut close_line_start = line_start.clone();
             if !close_line_start.scan_space(4) {
                 let close_ix = ix + close_line_start.bytes_scanned();
-                if let Some(n) = scan_closing_code_fence(&bytes[close_ix..], fence_ch, n_fence_char)
+                if let Some(n) = scan_closing(&bytes[close_ix..], fence_ch, n_fence_char)
                 {
                     ix = close_ix + n;
                     break;
@@ -939,7 +937,7 @@ impl<'a, 'b> FirstPass<'a, 'b> {
             let mut close_line_start = line_start.clone();
             if !close_line_start.scan_space(4) {
                 let close_ix = ix + close_line_start.bytes_scanned();
-                if let Some(n) = scan_closing_code_fence(&bytes[close_ix..], fence_ch, n_fence_char)
+                if let Some(n) = scan_closing(&bytes[close_ix..], fence_ch, n_fence_char)
                 {
                     ix = close_ix + n;
                     break;
