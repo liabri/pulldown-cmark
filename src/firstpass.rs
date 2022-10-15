@@ -201,7 +201,7 @@ impl<'a, 'b> FirstPass<'a, 'b> {
         }
 
         if let Some((n, ch)) = scan_vertical_paragraph(&bytes[ix..]) {
-            return self.parse_vertical_paragraph_block(ix, indent, ch, n);
+            return self.parse_vertical_paragraph(ix, ch, n);
         }
 
         self.parse_paragraph(ix)
@@ -312,6 +312,55 @@ impl<'a, 'b> FirstPass<'a, 'b> {
         let (ix, row_ix) = self.parse_table_row_inner(ix, row_cells);
         Some((ix, row_ix))
     }
+
+    fn parse_vertical_paragraph(&mut self, start_ix: usize, ch: u8, n_char: usize) -> usize {
+        self.tree.append(Item {
+            start: start_ix,
+            end: 0, // will get set later
+            body: ItemBody::VerticalParagraph,
+        });
+        self.tree.push();
+        let bytes = self.text.as_bytes();
+
+        let mut info_start = start_ix + n_char;
+        info_start += scan_whitespace_no_nl(&bytes[info_start..]);
+        let mut ix = info_start + scan_nextline(&bytes[info_start..]);
+        loop {
+            let mut line_start = LineStart::new(&bytes[ix..]);
+            let n_containers = scan_containers(&self.tree, &mut line_start);
+            if n_containers < self.tree.spine_len() {
+                break;
+            }
+
+            let mut close_line_start = line_start.clone();
+            if !close_line_start.scan_space(4) {
+                let close_ix = ix + close_line_start.bytes_scanned();
+                if let Some(n) = scan_closing(&bytes[close_ix..], ch, n_char)
+                {
+                    ix = close_ix + n;
+                    break;
+                }
+            }
+
+            let scan_mode = if self.options.contains(Options::ENABLE_TABLES) && ix == start_ix {
+                TableParseMode::Scan
+            } else {
+                TableParseMode::Disabled
+            };
+            let (next_ix, brk) = self.parse_line(ix, None, scan_mode);
+
+            line_start.scan_all_space();
+            ix = next_ix + line_start.bytes_scanned();
+            if let Some(item) = brk {
+                self.tree.append(item);
+            }
+        }
+
+        self.pop(ix);
+        ix + scan_blank_line(&bytes[ix..]).unwrap_or(0)
+    }
+
+
 
     /// Returns offset of line start after paragraph.
     fn parse_paragraph(&mut self, start_ix: usize) -> usize {
@@ -856,54 +905,6 @@ impl<'a, 'b> FirstPass<'a, 'b> {
         }
         self.pop(end_ix);
         ix
-    }
-
-    fn parse_vertical_paragraph_block(
-        &mut self,
-        start_ix: usize,
-        indent: usize,
-        fence_ch: u8,
-        n_fence_char: usize,
-    ) -> usize {
-        let bytes = self.text.as_bytes();
-        let mut info_start = start_ix + n_fence_char;
-        info_start += scan_whitespace_no_nl(&bytes[info_start..]);
-        // TODO: info strings are typically very short. wouldn't it be faster
-        // to just do a forward scan here?
-        let mut ix = info_start + scan_nextline(&bytes[info_start..]);
-        self.tree.append(Item {
-            start: start_ix,
-            end: 0, // will get set later
-            body: ItemBody::VerticalParagraph,
-        });
-        self.tree.push();
-        loop {
-            let mut line_start = LineStart::new(&bytes[ix..]);
-            let n_containers = scan_containers(&self.tree, &mut line_start);
-            if n_containers < self.tree.spine_len() {
-                break;
-            }
-            line_start.scan_space(indent);
-            let mut close_line_start = line_start.clone();
-            if !close_line_start.scan_space(4) {
-                let close_ix = ix + close_line_start.bytes_scanned();
-                if let Some(n) = scan_closing(&bytes[close_ix..], fence_ch, n_fence_char)
-                {
-                    ix = close_ix + n;
-                    break;
-                }
-            }
-            let remaining_space = line_start.remaining_space();
-            ix += line_start.bytes_scanned();
-            let next_ix = ix + scan_nextline(&bytes[ix..]);
-            self.append_code_text(remaining_space, ix, next_ix);
-            ix = next_ix;
-        }
-
-        self.pop(ix);
-
-        // try to read trailing whitespace or it will register as a completely blank line
-        ix + scan_blank_line(&bytes[ix..]).unwrap_or(0)
     }
 
     fn parse_fenced_code_block(
