@@ -361,15 +361,6 @@ impl<'input, 'callback> Parser<'input, 'callback> {
                         if let Some((next_ix, text)) =
                             self.scan_inline_ruby(block_text, self.tree[cur_ix].item.end, next)
                         {
-                            println!("RUBY!");
-                            // let cow_ix = self.allocs.allocate_cow(text);
-                            // cur = Some(tos.node);
-                            // cur_ix = tos.node;
-                            // self.tree[cur_ix].item.body = {
-                            //     ItemBody::Ruby(cow_ix)
-                            // }
-
-
                             let next_node = scan_nodes_to_ix(&self.tree, next, next_ix);
                             if let Some(prev_ix) = prev {
                                 self.tree[prev_ix].next = None;

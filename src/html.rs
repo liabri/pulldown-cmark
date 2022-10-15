@@ -376,11 +376,11 @@ where
                 self.write("</a>")?;
             }
             Tag::Ruby(text) => {
-                self.write("<rp>(</rp>")?;
+                self.write("<rp>【</rp>")?;
                 self.write("<rt>")?;
                 escape_html(&mut self.writer, &text)?;
                 self.write("</rt>")?;
-                self.write("<rp>)</rp>")?;
+                self.write("<rp>】</rp>")?;
                 self.write("</ruby>")?;
             }
             Tag::Image(_, _, _) => (), // shouldn't happen, handled in start
