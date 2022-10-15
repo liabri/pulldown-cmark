@@ -101,6 +101,7 @@ impl<'a> CodeBlockKind<'a> {
 pub enum Tag<'a> {
     /// A paragraph of text and other inline elements.
     Paragraph,
+    VerticalParagraph,
 
     /// A heading. The first field indicates the level of the heading,
     /// the second the fragment identifier, and the third the classes.

@@ -199,6 +199,11 @@ impl<'a, 'b> FirstPass<'a, 'b> {
         if let Some((n, fence_ch)) = scan_code_fence(&bytes[ix..]) {
             return self.parse_fenced_code_block(ix, indent, fence_ch, n);
         }
+
+        if let Some((n, ch)) = scan_vertical_paragraph(&bytes[ix..]) {
+            return self.parse_vertical_paragraph_block(ix, indent, ch, n);
+        }
+
         self.parse_paragraph(ix)
     }
 
@@ -853,6 +858,56 @@ impl<'a, 'b> FirstPass<'a, 'b> {
         ix
     }
 
+    fn parse_vertical_paragraph_block(
+        &mut self,
+        start_ix: usize,
+        indent: usize,
+        fence_ch: u8,
+        n_fence_char: usize,
+    ) -> usize {
+        let bytes = self.text.as_bytes();
+        let mut info_start = start_ix + n_fence_char;
+        info_start += scan_whitespace_no_nl(&bytes[info_start..]);
+        // TODO: info strings are typically very short. wouldn't it be faster
+        // to just do a forward scan here?
+        let mut ix = info_start + scan_nextline(&bytes[info_start..]);
+        let info_end = ix - scan_rev_while(&bytes[info_start..ix], is_ascii_whitespace);
+        let info_string = unescape(&self.text[info_start..info_end]);
+        self.tree.append(Item {
+            start: start_ix,
+            end: 0, // will get set later
+            body: ItemBody::VerticalParagraph,
+        });
+        self.tree.push();
+        loop {
+            let mut line_start = LineStart::new(&bytes[ix..]);
+            let n_containers = scan_containers(&self.tree, &mut line_start);
+            if n_containers < self.tree.spine_len() {
+                break;
+            }
+            line_start.scan_space(indent);
+            let mut close_line_start = line_start.clone();
+            if !close_line_start.scan_space(4) {
+                let close_ix = ix + close_line_start.bytes_scanned();
+                if let Some(n) = scan_closing_code_fence(&bytes[close_ix..], fence_ch, n_fence_char)
+                {
+                    ix = close_ix + n;
+                    break;
+                }
+            }
+            let remaining_space = line_start.remaining_space();
+            ix += line_start.bytes_scanned();
+            let next_ix = ix + scan_nextline(&bytes[ix..]);
+            self.append_code_text(remaining_space, ix, next_ix);
+            ix = next_ix;
+        }
+
+        self.pop(ix);
+
+        // try to read trailing whitespace or it will register as a completely blank line
+        ix + scan_blank_line(&bytes[ix..]).unwrap_or(0)
+    }
+
     fn parse_fenced_code_block(
         &mut self,
         start_ix: usize,
@@ -1303,6 +1358,7 @@ fn scan_paragraph_interrupt(bytes: &[u8], current_container: bool) -> bool {
         || scan_hrule(bytes).is_ok()
         || scan_atx_heading(bytes).is_some()
         || scan_code_fence(bytes).is_some()
+        || scan_vertical_paragraph(bytes).is_some()
         || scan_blockquote_start(bytes).is_some()
         || scan_listitem(bytes).map_or(false, |(ix, delim, index, _)| {
             ! current_container ||

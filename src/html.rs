@@ -147,6 +147,13 @@ where
                     self.write("\n<p>")
                 }
             }
+            Tag::VerticalParagraph => {
+                if self.end_newline {
+                    self.write("<p style=\"writing-mode: vertical-rl\">")
+                } else {
+                    self.write("\n<p>")
+                }
+            }
             Tag::Heading(level, id, classes) => {
                 if self.end_newline {
                     self.end_newline = false;
@@ -310,7 +317,7 @@ where
 
     fn end_tag(&mut self, tag: Tag) -> io::Result<()> {
         match tag {
-            Tag::Paragraph => {
+            Tag::Paragraph | Tag::VerticalParagraph => {
                 self.write("</p>\n")?;
             }
             Tag::Heading(level, _id, _classes) => {

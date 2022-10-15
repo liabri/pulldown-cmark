@@ -52,6 +52,7 @@ pub(crate) struct Item {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum ItemBody {
     Paragraph,
+    VerticalParagraph,
     Text,
     SoftBreak,
     HardBreak,
@@ -1464,6 +1465,7 @@ impl<'a, 'b> Iterator for OffsetIter<'a, 'b> {
 fn item_to_tag<'a>(item: &Item, allocs: &Allocations<'a>) -> Tag<'a> {
     match item.body {
         ItemBody::Paragraph => Tag::Paragraph,
+        ItemBody::VerticalParagraph => Tag::VerticalParagraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,
         ItemBody::Underline => Tag::Underline,
@@ -1523,6 +1525,7 @@ fn item_to_event<'a>(item: Item, text: &'a str, allocs: &Allocations<'a>) -> Eve
         ItemBody::Rule => return Event::Rule,
 
         ItemBody::Paragraph => Tag::Paragraph,
+        ItemBody::VerticalParagraph => Tag::VerticalParagraph,
         ItemBody::Superscript => Tag::Superscript,
         ItemBody::Subscript => Tag::Subscript,
         ItemBody::Underline => Tag::Underline,

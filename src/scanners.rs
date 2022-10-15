@@ -584,7 +584,7 @@ pub(crate) fn scan_table_head(data: &[u8]) -> (usize, Vec<Alignment>) {
 /// Returns number of bytes scanned and the char that is repeated to make the code fence.
 pub(crate) fn scan_code_fence(data: &[u8]) -> Option<(usize, u8)> {
     let c = *data.get(0)?;
-    if !(c == b'`' || c == b'~') {
+    if !(c == b'`') {
         return None;
     }
     let i = 1 + scan_ch_repeat(&data[1..], c);
@@ -594,6 +594,30 @@ pub(crate) fn scan_code_fence(data: &[u8]) -> Option<(usize, u8)> {
             let next_line = i + scan_nextline(suffix);
             // FIXME: make sure this is correct
             if suffix[..(next_line - i)].iter().any(|&b| b == b'`') {
+                return None;
+            }
+        }
+        Some((i, c))
+    } else {
+        None
+    }
+}
+
+/// Scan vertical paragraph.
+///
+/// Returns number of bytes scanned and the char that is repeated to make the vertical paragraph.
+pub(crate) fn scan_vertical_paragraph(data: &[u8]) -> Option<(usize, u8)> {
+    let c = *data.get(0)?;
+    if !(c == b'~') {
+        return None;
+    }
+    let i = 1 + scan_ch_repeat(&data[1..], c);
+    if i >= 3 {
+        if c == b'~' {
+            let suffix = &data[i..];
+            let next_line = i + scan_nextline(suffix);
+            // FIXME: make sure this is correct
+            if suffix[..(next_line - i)].iter().any(|&b| b == b'~') {
                 return None;
             }
         }
